@@ -59,12 +59,23 @@ class AutomationGUI:
         """저장된 설정 불러오기"""
         try:
             if self.config_file.exists():
+                print(f"설정 파일 발견: {self.config_file}")
                 with open(self.config_file, 'r', encoding='utf-8') as f:
                     config = json.load(f)
-                    self.username_var.set(config.get('username', 'admin48'))
-                    self.password_var.set(config.get('password', 'tkfkd'))
+                    username = config.get('username', 'admin48')
+                    password = config.get('password', 'tkfkd')
+
+                    self.username_var.set(username)
+                    self.password_var.set(password)
+
+                    print(f"아이디 로드: {username}")
+                    print(f"비밀번호 로드 완료")
+            else:
+                print(f"설정 파일이 없습니다. 기본값 사용: {self.config_file}")
         except Exception as e:
             print(f"설정 불러오기 실패: {e}")
+            import traceback
+            traceback.print_exc()
 
     def save_settings_to_file(self):
         """설정을 파일에 저장"""
@@ -75,9 +86,12 @@ class AutomationGUI:
             }
             with open(self.config_file, 'w', encoding='utf-8') as f:
                 json.dump(config, f, ensure_ascii=False, indent=2)
+            print(f"설정 저장 완료: {self.config_file}")
             return True
         except Exception as e:
             print(f"설정 저장 실패: {e}")
+            import traceback
+            traceback.print_exc()
             return False
 
 
@@ -377,9 +391,15 @@ class AutomationGUI:
                     page.locator(".col-12").first.click()
                     page.wait_for_load_state("domcontentloaded")
                     page.get_by_role("textbox", name="아이디").click()
-                    page.get_by_role("textbox", name="아이디").fill(self.username_var.get())
+
+                    # 로그인 정보 로그 출력
+                    login_username = self.username_var.get()
+                    login_password = self.password_var.get()
+                    print(f"로그인 시도 - 아이디: {login_username}, 비밀번호 길이: {len(login_password)}")
+
+                    page.get_by_role("textbox", name="아이디").fill(login_username)
                     page.get_by_role("textbox", name="아이디").press("Tab")
-                    page.get_by_role("textbox", name="비밀번호").fill(self.password_var.get())
+                    page.get_by_role("textbox", name="비밀번호").fill(login_password)
                     page.get_by_role("button", name=" 로그인").click()
                     page.wait_for_load_state("domcontentloaded")
 
@@ -486,9 +506,15 @@ class AutomationGUI:
                     page.locator(".col-12").first.click()
                     page.wait_for_load_state("domcontentloaded")
                     page.get_by_role("textbox", name="아이디").click()
-                    page.get_by_role("textbox", name="아이디").fill(self.username_var.get())
+
+                    # 로그인 정보 로그 출력
+                    login_username = self.username_var.get()
+                    login_password = self.password_var.get()
+                    print(f"로그인 시도 - 아이디: {login_username}, 비밀번호 길이: {len(login_password)}")
+
+                    page.get_by_role("textbox", name="아이디").fill(login_username)
                     page.get_by_role("textbox", name="아이디").press("Tab")
-                    page.get_by_role("textbox", name="비밀번호").fill(self.password_var.get())
+                    page.get_by_role("textbox", name="비밀번호").fill(login_password)
                     page.get_by_role("button", name=" 로그인").click()
                     page.wait_for_load_state("domcontentloaded")
 
