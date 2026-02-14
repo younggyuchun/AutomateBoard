@@ -102,6 +102,11 @@ class AutomationGUI:
         )
         show_browser_checkbox.pack(side='right', padx=(0, 10))
 
+        # 프로그레스 바
+        self.sermon_progress = ctk.CTkProgressBar(self.sermon_tab, height=20)
+        self.sermon_progress.pack(fill='x', padx=20, pady=(0, 10))
+        self.sermon_progress.set(0)
+
         # 로그 출력
         log_frame = ctk.CTkFrame(self.sermon_tab, corner_radius=15)
         log_frame.pack(fill='both', expand=True, padx=20, pady=(0, 20))
@@ -149,6 +154,11 @@ class AutomationGUI:
         )
         show_browser_checkbox.pack(side='right', padx=(0, 10))
 
+        # 프로그레스 바
+        self.popup_progress = ctk.CTkProgressBar(self.popup_tab, height=20)
+        self.popup_progress.pack(fill='x', padx=20, pady=(0, 10))
+        self.popup_progress.set(0)
+
         # 로그 출력
         log_frame = ctk.CTkFrame(self.popup_tab, corner_radius=15)
         log_frame.pack(fill='both', expand=True, padx=20, pady=(0, 20))
@@ -158,10 +168,12 @@ class AutomationGUI:
         self.popup_log = ctk.CTkTextbox(log_frame, height=300, font=("Courier", 12), corner_radius=10)
         self.popup_log.pack(fill='both', expand=True, padx=10, pady=(0, 10))
 
-    def log_message(self, log_widget, message):
-        """로그 메시지 출력"""
+    def log_message(self, log_widget, message, progress_bar=None, progress_value=None):
+        """로그 메시지 출력 및 프로그레스 바 업데이트"""
         log_widget.insert("end", message + '\n')
         log_widget.see("end")
+        if progress_bar is not None and progress_value is not None:
+            progress_bar.set(progress_value)
         self.root.update()
 
     def run_sermon_automation(self):
@@ -180,12 +192,13 @@ class AutomationGUI:
         # 버튼 비활성화
         self.sermon_run_btn.configure(state='disabled')
         self.sermon_log.delete("1.0", "end")
-        self.log_message(self.sermon_log, "주일설교 등록 시작...")
+        self.sermon_progress.set(0)
+        self.log_message(self.sermon_log, "주일설교 등록 시작...", self.sermon_progress, 0)
 
         def run_task():
             try:
                 with sync_playwright() as playwright:
-                    self.log_message(self.sermon_log, "브라우저 실행 중...")
+                    self.log_message(self.sermon_log, "브라우저 실행 중...", self.sermon_progress, 0.1)
                     browser = playwright.chromium.launch(
                         headless=not self.show_browser_var.get(),
                         channel="chrome"  # 시스템에 설치된 크롬을 직접 사용
@@ -193,10 +206,10 @@ class AutomationGUI:
                     context = browser.new_context()
                     page = context.new_page()
 
-                    self.log_message(self.sermon_log, "웹사이트 접속 중...")
+                    self.log_message(self.sermon_log, "웹사이트 접속 중...", self.sermon_progress, 0.2)
                     page.goto("https://www.hansomang.ca/", wait_until="domcontentloaded")
 
-                    self.log_message(self.sermon_log, "로그인 중...")
+                    self.log_message(self.sermon_log, "로그인 중...", self.sermon_progress, 0.3)
                     page.get_by_role("link", name="로그인", exact=True).click()
                     page.wait_for_load_state("domcontentloaded")
                     page.locator(".col-12").first.click()
@@ -208,14 +221,14 @@ class AutomationGUI:
                     page.get_by_role("button", name=" 로그인").click()
                     page.wait_for_load_state("domcontentloaded")
 
-                    self.log_message(self.sermon_log, "주일설교 페이지 이동 중...")
+                    self.log_message(self.sermon_log, "주일설교 페이지 이동 중...", self.sermon_progress, 0.5)
                     page.goto("https://www.hansomang.ca/_chboard/bbs/board.php?bo_table=m2_1")
 
-                    self.log_message(self.sermon_log, "글쓰기 페이지 로딩 중...")
+                    self.log_message(self.sermon_log, "글쓰기 페이지 로딩 중...", self.sermon_progress, 0.6)
                     page.get_by_role("link", name=" 글쓰기").click()
                     page.wait_for_load_state("domcontentloaded")
 
-                    self.log_message(self.sermon_log, "데이터 입력 중...")
+                    self.log_message(self.sermon_log, "데이터 입력 중...", self.sermon_progress, 0.7)
                     page.locator("#wr_subject").click()
                     page.locator("#wr_subject").fill(subject)
                     page.locator("input[name=\"wr_7\"]").click()
@@ -234,15 +247,15 @@ class AutomationGUI:
                     page.locator("input[name=\"wr_link1\"]").click()
                     page.locator("input[name=\"wr_link1\"]").fill(video_link)
 
-                    self.log_message(self.sermon_log, "글 등록 중...")
+                    self.log_message(self.sermon_log, "글 등록 중...", self.sermon_progress, 0.85)
                     page.get_by_role("button", name="글쓰기완료").click()
                     page.wait_for_load_state("domcontentloaded")
 
-                    self.log_message(self.sermon_log, "완료! 브라우저 종료 중...")
+                    self.log_message(self.sermon_log, "완료! 브라우저 종료 중...", self.sermon_progress, 0.95)
                     context.close()
                     browser.close()
 
-                    self.log_message(self.sermon_log, "✓ 주일설교 등록이 완료되었습니다.")
+                    self.log_message(self.sermon_log, "✓ 주일설교 등록이 완료되었습니다.", self.sermon_progress, 1.0)
                     messagebox.showinfo("완료", "주일설교 등록이 완료되었습니다.")
 
             except Exception as e:
@@ -267,12 +280,13 @@ class AutomationGUI:
         # 버튼 비활성화
         self.popup_run_btn.configure(state='disabled')
         self.popup_log.delete("1.0", "end")
-        self.log_message(self.popup_log, "팝업창 수정 시작...")
+        self.popup_progress.set(0)
+        self.log_message(self.popup_log, "팝업창 수정 시작...", self.popup_progress, 0)
 
         def run_task():
             try:
                 with sync_playwright() as playwright:
-                    self.log_message(self.popup_log, "브라우저 실행 중...")
+                    self.log_message(self.popup_log, "브라우저 실행 중...", self.popup_progress, 0.1)
                     browser = playwright.chromium.launch(
                         headless=not self.show_browser_var.get(),
                         channel="chrome"  # 시스템에 설치된 크롬을 직접 사용
@@ -280,10 +294,10 @@ class AutomationGUI:
                     context = browser.new_context()
                     page = context.new_page()
 
-                    self.log_message(self.popup_log, "웹사이트 접속 중...")
+                    self.log_message(self.popup_log, "웹사이트 접속 중...", self.popup_progress, 0.2)
                     page.goto("https://www.hansomang.ca/", wait_until="domcontentloaded")
 
-                    self.log_message(self.popup_log, "로그인 중...")
+                    self.log_message(self.popup_log, "로그인 중...", self.popup_progress, 0.3)
                     page.get_by_role("link", name="로그인", exact=True).click()
                     page.wait_for_load_state("domcontentloaded")
                     page.locator(".col-12").first.click()
@@ -295,7 +309,7 @@ class AutomationGUI:
                     page.get_by_role("button", name=" 로그인").click()
                     page.wait_for_load_state("domcontentloaded")
 
-                    self.log_message(self.popup_log, "관리자 페이지 이동 중...")
+                    self.log_message(self.popup_log, "관리자 페이지 이동 중...", self.popup_progress, 0.5)
                     page.get_by_role("link", name="관리자").click()
                     page.wait_for_load_state("domcontentloaded")
                     page.locator("a").filter(has_text="웹사이트 관리").click()
@@ -303,7 +317,7 @@ class AutomationGUI:
                     page.get_by_role("link", name="팝업창").click()
                     page.wait_for_load_state("domcontentloaded")
 
-                    self.log_message(self.popup_log, "팝업창 수정 중...")
+                    self.log_message(self.popup_log, "팝업창 수정 중...", self.popup_progress, 0.7)
                     page.get_by_role("link", name="수정").nth(3).click()
                     page.get_by_text("클릭").nth(3).click()
                     page.wait_for_load_state("domcontentloaded")
@@ -316,11 +330,11 @@ class AutomationGUI:
                     page.get_by_role("button", name=" 팝업창수정완료").click()
                     page.wait_for_load_state("domcontentloaded")
 
-                    self.log_message(self.popup_log, "완료! 브라우저 종료 중...")
+                    self.log_message(self.popup_log, "완료! 브라우저 종료 중...", self.popup_progress, 0.95)
                     context.close()
                     browser.close()
 
-                    self.log_message(self.popup_log, "✓ 팝업창 수정이 완료되었습니다.")
+                    self.log_message(self.popup_log, "✓ 팝업창 수정이 완료되었습니다.", self.popup_progress, 1.0)
                     messagebox.showinfo("완료", "팝업창 수정이 완료되었습니다.")
 
             except Exception as e:
