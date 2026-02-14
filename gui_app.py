@@ -13,7 +13,7 @@ class AutomationGUI:
     def __init__(self, root):
         self.root = root
         self.root.title("Hansomang 자동화 도구")
-        self.root.geometry("800x900")
+        self.root.geometry("800x800")
 
         # 브라우저 보이기 설정 변수 (True = 보이기, False = 숨기기)
         self.show_browser_var = ctk.BooleanVar(value=True)
