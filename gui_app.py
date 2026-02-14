@@ -21,6 +21,10 @@ class AutomationGUI:
         # 외부영상연결 URL 공유 변수 (주일설교와 팝업창 수정이 동일한 값 공유)
         self.shared_url_var = ctk.StringVar(value="")
 
+        # 로그인 정보 변수 (기본값 설정)
+        self.username_var = ctk.StringVar(value="admin48")
+        self.password_var = ctk.StringVar(value="tkfkd")
+
         # 탭 생성
         self.tabview = ctk.CTkTabview(root, corner_radius=15, border_width=2)
         self.tabview.pack(fill='both', expand=True, padx=20, pady=20)
@@ -37,6 +41,11 @@ class AutomationGUI:
         self.tabview.add("팝업창 수정")
         self.popup_tab = self.tabview.tab("팝업창 수정")
         self.create_popup_tab()
+
+        # 설정 탭
+        self.tabview.add("설정")
+        self.settings_tab = self.tabview.tab("설정")
+        self.create_settings_tab()
 
 
     def create_sermon_tab(self):
@@ -185,9 +194,95 @@ class AutomationGUI:
         self.popup_log = ctk.CTkTextbox(log_frame, font=("Courier", 12), corner_radius=10)
         self.popup_log.pack(fill='both', expand=True, padx=10, pady=(0, 10))
 
-    def log_message(self, log_widget, message, progress_bar=None, progress_value=None, progress_label=None):
+    def create_settings_tab(self):
+        """설정 탭 생성"""
+        # 설명 프레임
+        info_frame = ctk.CTkFrame(self.settings_tab, corner_radius=15)
+        info_frame.pack(fill='x', padx=20, pady=20)
+
+        info_label = ctk.CTkLabel(
+            info_frame,
+            text="로그인 정보 설정\n아이디와 비밀번호를 변경하면 자동으로 반영됩니다.",
+            font=("", 14),
+            justify="left"
+        )
+        info_label.pack(padx=20, pady=20)
+
+        # 입력 프레임
+        input_frame = ctk.CTkFrame(self.settings_tab, corner_radius=15)
+        input_frame.pack(fill='x', padx=20, pady=20)
+
+        # 아이디 입력
+        ctk.CTkLabel(input_frame, text="아이디:", font=("", 16, "bold")).grid(row=0, column=0, sticky='w', padx=15, pady=15)
+        self.settings_username_entry = ctk.CTkEntry(
+            input_frame,
+            width=500,
+            height=42,
+            corner_radius=10,
+            font=("", 14),
+            textvariable=self.username_var
+        )
+        self.settings_username_entry.grid(row=0, column=1, pady=15, padx=15)
+
+        # 비밀번호 입력 (마스킹 처리)
+        ctk.CTkLabel(input_frame, text="비밀번호:", font=("", 16, "bold")).grid(row=1, column=0, sticky='w', padx=15, pady=15)
+        self.settings_password_entry = ctk.CTkEntry(
+            input_frame,
+            width=500,
+            height=42,
+            corner_radius=10,
+            font=("", 14),
+            textvariable=self.password_var,
+            show="●"  # 비밀번호 마스킹 처리
+        )
+        self.settings_password_entry.grid(row=1, column=1, pady=15, padx=15)
+
+        # 저장 버튼
+        save_button_frame = ctk.CTkFrame(self.settings_tab, fg_color="transparent")
+        save_button_frame.pack(pady=15, padx=20, fill='x')
+
+        self.settings_save_btn = ctk.CTkButton(
+            save_button_frame,
+            text="설정 저장",
+            command=self.save_settings,
+            height=50,
+            font=("", 17, "bold"),
+            corner_radius=12,
+            fg_color="green",
+            hover_color="darkgreen"
+        )
+        self.settings_save_btn.pack(side='right')
+
+        # 상태 메시지
+        self.settings_status_label = ctk.CTkLabel(
+            self.settings_tab,
+            text="",
+            font=("", 14),
+            text_color="green"
+        )
+        self.settings_status_label.pack(pady=10)
+
+    def save_settings(self):
+        """설정 저장"""
+        username = self.username_var.get().strip()
+        password = self.password_var.get().strip()
+
+        if not username or not password:
+            messagebox.showwarning("입력 오류", "아이디와 비밀번호를 모두 입력해주세요.")
+            return
+
+        self.settings_status_label.configure(text="✓ 설정이 저장되었습니다.")
+        messagebox.showinfo("완료", "설정이 저장되었습니다.")
+
+    def log_message(self, log_widget, message, progress_bar=None, progress_value=None, progress_label=None, color=None):
         """로그 메시지 출력 및 프로그레스 바 업데이트"""
-        log_widget.insert("end", message + '\n')
+        if color:
+            # 색상이 지정된 경우 태그를 사용하여 색상 적용
+            tag_name = f"color_{color}"
+            log_widget.tag_config(tag_name, foreground=color)
+            log_widget.insert("end", message + '\n', tag_name)
+        else:
+            log_widget.insert("end", message + '\n')
         log_widget.see("end")
         if progress_bar is not None and progress_value is not None:
             progress_bar.set(progress_value)
@@ -197,6 +292,14 @@ class AutomationGUI:
 
     def run_sermon_automation(self):
         """주일설교 등록 자동화 실행"""
+        # 아이디/비밀번호 검증
+        username = self.username_var.get().strip()
+        password = self.password_var.get().strip()
+
+        if not username or not password:
+            messagebox.showwarning("로그인 정보 오류", "설정 탭에서 아이디와 비밀번호를 입력해주세요.")
+            return
+
         # 입력 값 검증
         subject = self.subject_entry.get().strip()
         scripture = self.scripture_entry.get().strip()
@@ -235,11 +338,25 @@ class AutomationGUI:
                     page.locator(".col-12").first.click()
                     page.wait_for_load_state("domcontentloaded")
                     page.get_by_role("textbox", name="아이디").click()
-                    page.get_by_role("textbox", name="아이디").fill("admin48")
+                    page.get_by_role("textbox", name="아이디").fill(self.username_var.get())
                     page.get_by_role("textbox", name="아이디").press("Tab")
-                    page.get_by_role("textbox", name="비밀번호").fill("tkfkd")
+                    page.get_by_role("textbox", name="비밀번호").fill(self.password_var.get())
                     page.get_by_role("button", name=" 로그인").click()
                     page.wait_for_load_state("domcontentloaded")
+
+                    # 로그인 성공 여부 확인
+                    self.log_message(self.sermon_log, "로그인 결과 확인 중...", self.sermon_progress, 0.4, self.sermon_progress_label)
+                    try:
+                        # 로그인 성공 시 나타나는 요소 확인 (로그아웃 링크 또는 관리자 메뉴)
+                        page.wait_for_selector("text=로그아웃", timeout=5000)
+                        self.log_message(self.sermon_log, "✓ 로그인 성공!", self.sermon_progress, 0.45, self.sermon_progress_label)
+                    except:
+                        # 로그인 실패
+                        self.log_message(self.sermon_log, "✗ 로그인 실패: 아이디 또는 비밀번호를 확인해주세요.", self.sermon_progress, 0.4, self.sermon_progress_label, color="red")
+                        messagebox.showerror("로그인 실패", "아이디 또는 비밀번호가 올바르지 않습니다.\n설정 탭에서 로그인 정보를 확인해주세요.")
+                        context.close()
+                        browser.close()
+                        return
 
                     self.log_message(self.sermon_log, "주일설교 페이지 이동 중...", self.sermon_progress, 0.5, self.sermon_progress_label)
                     page.goto("https://www.hansomang.ca/_chboard/bbs/board.php?bo_table=m2_1")
@@ -277,7 +394,7 @@ class AutomationGUI:
                     # 브라우저를 닫지 않음 - 사용자가 수동으로 닫을 수 있도록 유지
 
             except Exception as e:
-                self.log_message(self.sermon_log, f"✗ 오류 발생: {str(e)}")
+                self.log_message(self.sermon_log, f"✗ 오류 발생: {str(e)}", color="red")
                 messagebox.showerror("오류", f"실행 중 오류가 발생했습니다:\n{str(e)}")
             finally:
                 self.sermon_run_btn.configure(state='normal')
@@ -288,6 +405,14 @@ class AutomationGUI:
 
     def run_popup_automation(self):
         """팝업창 수정 자동화 실행"""
+        # 아이디/비밀번호 검증
+        username = self.username_var.get().strip()
+        password = self.password_var.get().strip()
+
+        if not username or not password:
+            messagebox.showwarning("로그인 정보 오류", "설정 탭에서 아이디와 비밀번호를 입력해주세요.")
+            return
+
         # 입력 값 검증
         popup_url = self.popup_url_entry.get().strip()
 
@@ -322,11 +447,25 @@ class AutomationGUI:
                     page.locator(".col-12").first.click()
                     page.wait_for_load_state("domcontentloaded")
                     page.get_by_role("textbox", name="아이디").click()
-                    page.get_by_role("textbox", name="아이디").fill("admin48")
+                    page.get_by_role("textbox", name="아이디").fill(self.username_var.get())
                     page.get_by_role("textbox", name="아이디").press("Tab")
-                    page.get_by_role("textbox", name="비밀번호").fill("tkfkd")
+                    page.get_by_role("textbox", name="비밀번호").fill(self.password_var.get())
                     page.get_by_role("button", name=" 로그인").click()
                     page.wait_for_load_state("domcontentloaded")
+
+                    # 로그인 성공 여부 확인
+                    self.log_message(self.popup_log, "로그인 결과 확인 중...", self.popup_progress, 0.4, self.popup_progress_label)
+                    try:
+                        # 로그인 성공 시 나타나는 요소 확인 (로그아웃 링크 또는 관리자 메뉴)
+                        page.wait_for_selector("text=로그아웃", timeout=5000)
+                        self.log_message(self.popup_log, "✓ 로그인 성공!", self.popup_progress, 0.45, self.popup_progress_label)
+                    except:
+                        # 로그인 실패
+                        self.log_message(self.popup_log, "✗ 로그인 실패: 아이디 또는 비밀번호를 확인해주세요.", self.popup_progress, 0.4, self.popup_progress_label, color="red")
+                        messagebox.showerror("로그인 실패", "아이디 또는 비밀번호가 올바르지 않습니다.\n설정 탭에서 로그인 정보를 확인해주세요.")
+                        context.close()
+                        browser.close()
+                        return
 
                     self.log_message(self.popup_log, "관리자 페이지 이동 중...", self.popup_progress, 0.5, self.popup_progress_label)
                     page.get_by_role("link", name="관리자").click()
@@ -357,7 +496,7 @@ class AutomationGUI:
                     messagebox.showinfo("완료", "팝업창 수정이 완료되었습니다.")
 
             except Exception as e:
-                self.log_message(self.popup_log, f"✗ 오류 발생: {str(e)}")
+                self.log_message(self.popup_log, f"✗ 오류 발생: {str(e)}", color="red")
                 messagebox.showerror("오류", f"실행 중 오류가 발생했습니다:\n{str(e)}")
             finally:
                 self.popup_run_btn.configure(state='normal')
