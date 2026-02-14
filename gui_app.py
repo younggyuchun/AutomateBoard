@@ -15,6 +15,9 @@ class AutomationGUI:
         self.root.title("Hansomang 자동화 도구")
         self.root.geometry("800x700")
 
+        # 브라우저 보이기 설정 변수 (True = 보이기, False = 숨기기)
+        self.show_browser_var = ctk.BooleanVar(value=True)
+
         # 탭 생성
         self.tabview = ctk.CTkTabview(root, corner_radius=15, border_width=2)
         self.tabview.pack(fill='both', expand=True, padx=20, pady=20)
@@ -31,6 +34,7 @@ class AutomationGUI:
         self.tabview.add("팝업창 수정")
         self.popup_tab = self.tabview.tab("팝업창 수정")
         self.create_popup_tab()
+
 
     def create_sermon_tab(self):
         """주일설교 등록 탭 생성"""
@@ -71,16 +75,32 @@ class AutomationGUI:
         self.video_link_entry = ctk.CTkEntry(input_frame, width=500, height=42, corner_radius=10, font=("", 14))
         self.video_link_entry.grid(row=4, column=1, pady=10, padx=15)
 
-        # 실행 버튼
+        # 버튼 프레임 (체크박스와 실행 버튼을 나란히 배치)
+        button_frame = ctk.CTkFrame(self.sermon_tab, fg_color="transparent")
+        button_frame.pack(pady=15, padx=20, fill='x')
+
+        # 실행 버튼 (오른쪽)
         self.sermon_run_btn = ctk.CTkButton(
-            self.sermon_tab,
+            button_frame,
             text="주일설교 등록 실행",
             command=self.run_sermon_automation,
             height=50,
             font=("", 17, "bold"),
             corner_radius=12
         )
-        self.sermon_run_btn.pack(pady=15)
+        self.sermon_run_btn.pack(side='right')
+
+        # 브라우저 보이기 체크박스 (버튼 바로 왼쪽)
+        show_browser_checkbox = ctk.CTkCheckBox(
+            button_frame,
+            text="브라우저 보이기",
+            variable=self.show_browser_var,
+            font=("", 12),
+            corner_radius=6,
+            checkbox_width=18,
+            checkbox_height=18
+        )
+        show_browser_checkbox.pack(side='right', padx=(0, 10))
 
         # 로그 출력
         log_frame = ctk.CTkFrame(self.sermon_tab, corner_radius=15)
@@ -102,16 +122,32 @@ class AutomationGUI:
         self.popup_url_entry = ctk.CTkEntry(input_frame, width=550, height=42, corner_radius=10, font=("", 14))
         self.popup_url_entry.grid(row=0, column=1, pady=15, padx=15)
 
-        # 실행 버튼
+        # 버튼 프레임 (체크박스와 실행 버튼을 나란히 배치)
+        button_frame = ctk.CTkFrame(self.popup_tab, fg_color="transparent")
+        button_frame.pack(pady=15, padx=20, fill='x')
+
+        # 실행 버튼 (오른쪽)
         self.popup_run_btn = ctk.CTkButton(
-            self.popup_tab,
+            button_frame,
             text="팝업창 수정 실행",
             command=self.run_popup_automation,
             height=50,
             font=("", 17, "bold"),
             corner_radius=12
         )
-        self.popup_run_btn.pack(pady=15)
+        self.popup_run_btn.pack(side='right')
+
+        # 브라우저 보이기 체크박스 (버튼 바로 왼쪽)
+        show_browser_checkbox = ctk.CTkCheckBox(
+            button_frame,
+            text="브라우저 보이기",
+            variable=self.show_browser_var,
+            font=("", 12),
+            corner_radius=6,
+            checkbox_width=18,
+            checkbox_height=18
+        )
+        show_browser_checkbox.pack(side='right', padx=(0, 10))
 
         # 로그 출력
         log_frame = ctk.CTkFrame(self.popup_tab, corner_radius=15)
@@ -150,9 +186,8 @@ class AutomationGUI:
             try:
                 with sync_playwright() as playwright:
                     self.log_message(self.sermon_log, "브라우저 실행 중...")
-                    #browser = playwright.chromium.launch(headless=False)
                     browser = playwright.chromium.launch(
-                        headless=True,
+                        headless=not self.show_browser_var.get(),
                         channel="chrome"  # 시스템에 설치된 크롬을 직접 사용
                     )
                     context = browser.new_context()
@@ -238,7 +273,10 @@ class AutomationGUI:
             try:
                 with sync_playwright() as playwright:
                     self.log_message(self.popup_log, "브라우저 실행 중...")
-                    browser = playwright.chromium.launch(headless=False)
+                    browser = playwright.chromium.launch(
+                        headless=not self.show_browser_var.get(),
+                        channel="chrome"  # 시스템에 설치된 크롬을 직접 사용
+                    )
                     context = browser.new_context()
                     page = context.new_page()
 
