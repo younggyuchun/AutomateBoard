@@ -3,6 +3,8 @@ from tkinter import messagebox
 import threading
 from playwright.sync_api import sync_playwright
 from datetime import datetime
+import json
+from pathlib import Path
 
 # CustomTkinter 설정
 ctk.set_appearance_mode("light")  # Modes: "System" (default), "Dark", "Light"
@@ -15,6 +17,9 @@ class AutomationGUI:
         self.root.title("Hansomang 자동화 도구")
         self.root.geometry("800x800")
 
+        # 설정 파일 경로 설정
+        self.config_file = Path.home() / ".hansomang_automation_config.json"
+
         # 브라우저 보이기 설정 변수 (True = 보이기, False = 숨기기)
         self.show_browser_var = ctk.BooleanVar(value=True)
 
@@ -24,6 +29,9 @@ class AutomationGUI:
         # 로그인 정보 변수 (기본값 설정)
         self.username_var = ctk.StringVar(value="admin48")
         self.password_var = ctk.StringVar(value="tkfkd")
+
+        # 저장된 설정 불러오기
+        self.load_settings()
 
         # 탭 생성
         self.tabview = ctk.CTkTabview(root, corner_radius=15, border_width=2)
@@ -46,6 +54,32 @@ class AutomationGUI:
         self.tabview.add("설정")
         self.settings_tab = self.tabview.tab("설정")
         self.create_settings_tab()
+
+    def load_settings(self):
+        """저장된 설정 불러오기"""
+        try:
+            if self.config_file.exists():
+                with open(self.config_file, 'r', encoding='utf-8') as f:
+                    config = json.load(f)
+                    self.username_var.set(config.get('username', 'admin48'))
+                    self.password_var.set(config.get('password', 'tkfkd'))
+        except Exception as e:
+            print(f"설정 불러오기 실패: {e}")
+
+    def save_settings_to_file(self):
+        """설정을 파일에 저장"""
+        try:
+            config = {
+                'username': self.username_var.get(),
+                'password': self.password_var.get()
+            }
+            with open(self.config_file, 'w', encoding='utf-8') as f:
+                json.dump(config, f, ensure_ascii=False, indent=2)
+            return True
+        except Exception as e:
+            print(f"설정 저장 실패: {e}")
+            return False
+
 
 
     def create_sermon_tab(self):
@@ -202,7 +236,7 @@ class AutomationGUI:
 
         info_label = ctk.CTkLabel(
             info_frame,
-            text="로그인 정보 설정\n아이디와 비밀번호를 변경하면 자동으로 반영됩니다.",
+            text="로그인 정보 설정\n아이디와 비밀번호를 입력하고 저장하면 다음 실행 시에도 유지됩니다.",
             font=("", 14),
             justify="left"
         )
@@ -271,8 +305,13 @@ class AutomationGUI:
             messagebox.showwarning("입력 오류", "아이디와 비밀번호를 모두 입력해주세요.")
             return
 
-        self.settings_status_label.configure(text="✓ 설정이 저장되었습니다.")
-        messagebox.showinfo("완료", "설정이 저장되었습니다.")
+        # 파일에 저장
+        if self.save_settings_to_file():
+            self.settings_status_label.configure(text="✓ 설정이 저장되었습니다.")
+            messagebox.showinfo("완료", "설정이 저장되었습니다.")
+        else:
+            self.settings_status_label.configure(text="✗ 설정 저장 실패", text_color="red")
+            messagebox.showerror("오류", "설정 저장에 실패했습니다.")
 
     def log_message(self, log_widget, message, progress_bar=None, progress_value=None, progress_label=None, color=None):
         """로그 메시지 출력 및 프로그레스 바 업데이트"""
