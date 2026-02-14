@@ -18,6 +18,9 @@ class AutomationGUI:
         # 브라우저 보이기 설정 변수 (True = 보이기, False = 숨기기)
         self.show_browser_var = ctk.BooleanVar(value=True)
 
+        # 외부영상연결 URL 공유 변수 (주일설교와 팝업창 수정이 동일한 값 공유)
+        self.shared_url_var = ctk.StringVar(value="")
+
         # 탭 생성
         self.tabview = ctk.CTkTabview(root, corner_radius=15, border_width=2)
         self.tabview.pack(fill='both', expand=True, padx=20, pady=20)
@@ -72,7 +75,7 @@ class AutomationGUI:
 
         # 영상 URL 입력
         ctk.CTkLabel(input_frame, text="외부영상연결 URL:", font=("", 16, "bold")).grid(row=4, column=0, sticky='w', padx=15, pady=10)
-        self.video_link_entry = ctk.CTkEntry(input_frame, width=500, height=42, corner_radius=10, font=("", 14))
+        self.video_link_entry = ctk.CTkEntry(input_frame, width=500, height=42, corner_radius=10, font=("", 14), textvariable=self.shared_url_var)
         self.video_link_entry.grid(row=4, column=1, pady=10, padx=15)
 
         # 버튼 프레임 (체크박스와 실행 버튼을 나란히 배치)
@@ -130,8 +133,8 @@ class AutomationGUI:
         input_frame.pack(fill='x', padx=20, pady=20)
 
         # URL 입력
-        ctk.CTkLabel(input_frame, text="팝업 URL:", font=("", 16, "bold")).grid(row=0, column=0, sticky='w', padx=15, pady=15)
-        self.popup_url_entry = ctk.CTkEntry(input_frame, width=550, height=42, corner_radius=10, font=("", 14))
+        ctk.CTkLabel(input_frame, text="외부영상연결 URL:", font=("", 16, "bold")).grid(row=0, column=0, sticky='w', padx=15, pady=15)
+        self.popup_url_entry = ctk.CTkEntry(input_frame, width=550, height=42, corner_radius=10, font=("", 14), textvariable=self.shared_url_var)
         self.popup_url_entry.grid(row=0, column=1, pady=15, padx=15)
 
         # 버튼 프레임 (체크박스와 실행 버튼을 나란히 배치)
