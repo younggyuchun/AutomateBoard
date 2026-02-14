@@ -89,6 +89,7 @@ When distributing to Windows users, include these files:
 
 ## Important Notes
 
+- **Python must be installed even when using the EXE file** (required for Playwright browser setup)
 - Buttons are disabled during execution and re-enabled when complete
 - All fields must be filled before execution
 - Browser runs in visible mode (headless=False) so you can see the process

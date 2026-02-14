@@ -38,6 +38,10 @@ Step 2: Run the Program
 Troubleshooting
 ===============
 
+Issue: "Python is not installed"
+Solution: Install Python from https://www.python.org/downloads/
+          Check "Add Python to PATH" during installation
+
 Issue: "Browser not found"
 Solution: Re-run setup_playwright.bat
 

@@ -58,6 +58,15 @@ Important Notes
 Troubleshooting
 ===============
 
+Problem: "Python is not installed" error
+→ Solution: Install Python from https://www.python.org/downloads/
+           Make sure to check "Add Python to PATH"
+           OR install from Microsoft Store
+
+Problem: "No module named 'playwright'" error
+→ Solution: This should be handled automatically by setup_playwright.bat
+           If error persists, manually run: pip install playwright
+
 Problem: "Browser not found" error
 → Solution: Run setup_playwright.bat again
 

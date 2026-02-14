@@ -51,6 +51,18 @@ When distributing to users, include:
 Common Issues on English Windows
 =================================
 
+Issue: "Python is not installed or not found in PATH"
+Solution: Install Python (see Step 0 above)
+         If already installed, reinstall with "Add Python to PATH" checked
+
+Issue: "No module named 'playwright'"
+Solution: Run setup_playwright.bat - it will install the package automatically
+         Or manually: pip install playwright
+
+Issue: Korean text appears as garbage/boxes
+Solution: Run setup_playwright.bat - it will install the package automatically
+         Or manually: pip install playwright
+
 Issue: Korean text appears as garbage/boxes
 Solution: This is normal on English Windows
          Use the _EN.txt files for English documentation
