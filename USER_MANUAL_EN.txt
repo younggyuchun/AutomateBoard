@@ -1,0 +1,92 @@
+================================================
+Hansomang Automation Tool - User Manual
+================================================
+
+First Time Setup
+================
+
+IMPORTANT: Before using the program for the first time,
+you MUST run setup_playwright.bat
+
+1. Double-click: setup_playwright.bat
+2. Wait for the installation to complete (3-5 minutes)
+3. You will see "Installation completed successfully!"
+4. Press any key to close the window
+
+
+How to Use
+==========
+
+1. Double-click HansomangAutomation.exe to start
+
+2. Select the tab you want to use:
+   - Sunday Sermon Registration
+   - Popup/Notice Registration
+
+3. Enter the required information
+
+4. Click the "Start Automation" button
+
+5. The browser will open automatically and perform the task
+
+6. Wait until you see "Completed!" message
+
+
+Features
+========
+
+Tab 1: Sunday Sermon Registration
+   - Automatically uploads Sunday sermon content
+   - Supports file attachment
+   - Auto-fills date and title
+
+Tab 2: Popup/Notice Registration
+   - Posts popup notices
+   - Manages display period
+   - Image upload support
+
+
+Important Notes
+===============
+
+⚠️  Do not close the browser window while automation is running
+⚠️  Ensure stable internet connection
+⚠️  Check login credentials before starting
+⚠️  The automation will stop if you see captcha or 2FA
+
+
+Troubleshooting
+===============
+
+Problem: "Browser not found" error
+→ Solution: Run setup_playwright.bat again
+
+Problem: Login fails
+→ Solution: Check ID/password and try manual login first
+
+Problem: Program crashes
+→ Solution: Restart and try again
+           Check if Windows Defender is blocking it
+
+Problem: Can't see Korean text
+→ Solution: Use USER_MANUAL_EN.txt (this file) for English Windows
+
+
+System Requirements
+===================
+
+- Windows 10 or later
+- Internet connection
+- 500MB free disk space
+- Administrator privileges (for first setup)
+
+
+Support
+=======
+
+For technical support, please contact your system administrator.
+
+
+Version: 0.1.0
+Last Updated: February 2026
+

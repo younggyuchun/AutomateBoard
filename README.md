@@ -83,7 +83,8 @@ python build_exe.py
 Windows 사용자에게 배포 시 다음 파일들을 포함하세요:
 1. `HansomangAutomation.exe` - 메인 실행 파일
 2. `setup_playwright.bat` - Playwright 설치 스크립트
-3. `사용설명서.txt` - 사용 설명서
+3. `사용설명서.txt` - 한글 사용 설명서
+4. `USER_MANUAL_EN.txt` - 영문 사용 설명서 (영문 윈도우용)
 
 ## 주의사항
 
@@ -92,6 +93,18 @@ Windows 사용자에게 배포 시 다음 파일들을 포함하세요:
 - 브라우저는 headless=False로 실행되므로 작업 과정을 직접 확인할 수 있습니다.
 - EXE 파일은 약 100-200MB 크기입니다.
 - 처음 사용 시 Playwright 브라우저 설치가 필요합니다 (약 100-200MB 추가).
+
+## 영문 윈도우 사용자
+
+영문 윈도우를 사용하시는 경우:
+- 한글 문서 파일이 깨져 보일 수 있습니다
+- 영문 문서 파일을 사용하세요:
+  - `README_EN.md` - 영문 README
+  - `USER_MANUAL_EN.txt` - 영문 사용 설명서
+  - `QUICK_START_EN.txt` - 영문 빠른 시작 가이드
+  - `WINDOWS_SETUP_EN.txt` - 영문 윈도우 설치 가이드
+- `setup_playwright.bat` 파일은 영문 윈도우에서도 정상 작동합니다
+- GUI 프로그램은 윈도우 언어와 관계없이 정상 작동합니다
 
 ## 시스템 요구사항
 

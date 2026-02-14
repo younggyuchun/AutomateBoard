@@ -1,0 +1,52 @@
+================================================
+Hansomang Automation Tool - Quick Start Guide
+================================================
+
+For Developers - Build EXE File
+================================
+
+1. Install PyInstaller:
+   pip install pyinstaller
+
+2. Build EXE:
+   pyinstaller HansomangAutomation.spec
+
+3. Output Location:
+   dist/HansomangAutomation.exe
+
+
+For End Users - Distribution Package
+=====================================
+
+Distribute these 3 files together:
+1. HansomangAutomation.exe
+2. setup_playwright.bat
+3. USER_MANUAL_EN.txt
+
+
+End User Installation Steps
+============================
+
+Step 1: First Time Setup (Run Once)
+   Double-click setup_playwright.bat
+   → Automatically installs browser (takes about 3-5 minutes)
+
+Step 2: Run the Program
+   Double-click HansomangAutomation.exe
+
+
+Troubleshooting
+===============
+
+Issue: "Browser not found"
+Solution: Re-run setup_playwright.bat
+
+Issue: Program won't start
+Solution: Run as Administrator
+
+Issue: Antivirus warning
+Solution: Add to antivirus exception list
+
+
+
+

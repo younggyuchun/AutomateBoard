@@ -1,0 +1,79 @@
+================================================
+Windows Setup Instructions (English)
+================================================
+
+For End Users - Quick Setup
+============================
+
+If you received the program files from your administrator:
+
+Step 1: Extract all files to a folder
+   HansomangAutomation.exe
+   setup_playwright.bat
+   USER_MANUAL_EN.txt (this file)
+
+Step 2: Run setup (FIRST TIME ONLY)
+   Double-click: setup_playwright.bat
+   Wait for completion (3-5 minutes)
+
+Step 3: Run the program
+   Double-click: HansomangAutomation.exe
+
+
+For Developers - Build Instructions
+====================================
+
+1. Install Python 3.13+
+   Download from: https://www.python.org/downloads/
+
+2. Clone or download this project
+
+3. Install dependencies:
+   pip install customtkinter playwright pyinstaller
+
+4. Build the EXE file:
+   pyinstaller HansomangAutomation.spec
+
+5. Output will be in:
+   dist/HansomangAutomation.exe
+
+
+Distribution Package
+====================
+
+When distributing to users, include:
+1. HansomangAutomation.exe (main program)
+2. setup_playwright.bat (browser installer)
+3. USER_MANUAL_EN.txt (user guide in English)
+4. 사용설명서.txt (user guide in Korean - optional)
+
+
+Common Issues on English Windows
+=================================
+
+Issue: Korean text appears as garbage/boxes
+Solution: This is normal on English Windows
+         Use the _EN.txt files for English documentation
+         The GUI application will still work correctly
+
+Issue: "playwright command not found"
+Solution: Already fixed - script uses "python -m playwright"
+
+Issue: Permission denied
+Solution: Right-click and "Run as Administrator"
+
+
+Technical Notes
+===============
+
+- The application GUI may still show Korean text
+- This is by design for Korean users
+- All functionality works the same regardless of Windows language
+- Browser automation works on any Windows language version
+
+
+Contact
+=======
+
+For support, contact your system administrator.
+
