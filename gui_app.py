@@ -71,7 +71,15 @@ class AutomationGUI:
                     print(f"아이디 로드: {username}")
                     print(f"비밀번호 로드 완료")
             else:
-                print(f"설정 파일이 없습니다. 기본값 사용: {self.config_file}")
+                print(f"설정 파일이 없습니다. 기본값으로 새 파일 생성: {self.config_file}")
+                # 설정 파일이 없으면 기본값으로 생성
+                config = {
+                    'username': 'admin48',
+                    'password': 'tkfkd'
+                }
+                with open(self.config_file, 'w', encoding='utf-8') as f:
+                    json.dump(config, f, ensure_ascii=False, indent=2)
+                print(f"기본 설정 파일 생성 완료")
         except Exception as e:
             print(f"설정 불러오기 실패: {e}")
             import traceback
