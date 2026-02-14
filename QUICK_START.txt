@@ -1,0 +1,67 @@
+================================================
+Hansomang 자동화 도구 - 빠른 시작 가이드
+================================================
+
+개발자용 - EXE 파일 빌드
+========================
+
+1. PyInstaller 설치:
+   pip install pyinstaller
+
+2. EXE 빌드:
+   pyinstaller HansomangAutomation.spec
+
+3. 생성된 파일 위치:
+   dist/HansomangAutomation.exe
+
+
+최종 사용자용 - 배포 패키지
+============================
+
+다음 3개 파일을 함께 배포하세요:
+1. HansomangAutomation.exe
+2. setup_playwright.bat
+3. 사용설명서.txt
+
+
+최종 사용자 설치 방법
+=====================
+
+1단계: 처음 한 번만 실행
+   setup_playwright.bat 더블클릭
+   → 브라우저 자동 설치 (약 3-5분 소요)
+
+2단계: 프로그램 실행
+   HansomangAutomation.exe 더블클릭
+
+
+문제 해결
+=========
+
+문제: "브라우저를 찾을 수 없습니다"
+해결: setup_playwright.bat 재실행
+
+문제: 프로그램이 실행되지 않음
+해결: 관리자 권한으로 실행
+
+문제: 백신 프로그램 경고
+해결: 백신 예외 목록에 추가
+
+
+기술 세부사항
+=============
+
+- 파일 크기: 약 100-200MB
+- 시스템: Windows 10 이상
+- Python 버전: Python 3.13 (포함됨)
+- 의존성: 모두 EXE에 포함됨
+- 브라우저: Chromium (별도 설치 필요)
+
+
+더 자세한 정보
+==============
+
+- 개발자용: BUILD_GUIDE.md
+- 사용자용: 사용설명서.txt
+- 프로젝트: README.md
+

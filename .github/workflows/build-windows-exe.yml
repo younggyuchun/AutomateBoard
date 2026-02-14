@@ -1,0 +1,59 @@
+name: Build Windows EXE
+
+on:
+  push:
+    branches: [ main, master ]
+  pull_request:
+    branches: [ main, master ]
+  workflow_dispatch:  # 수동 실행 가능
+
+jobs:
+  build:
+    runs-on: windows-latest
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Set up Python
+      uses: actions/setup-python@v5
+      with:
+        python-version: '3.13'
+
+    - name: Install dependencies
+      run: |
+        python -m pip install --upgrade pip
+        pip install customtkinter playwright pyinstaller
+
+    - name: Build EXE with PyInstaller
+      run: |
+        pyinstaller HansomangAutomation.spec
+
+    - name: Copy distribution files
+      run: |
+        New-Item -ItemType Directory -Force -Path release
+        Copy-Item dist\HansomangAutomation.exe release\
+        Copy-Item setup_playwright.bat release\
+        Copy-Item 사용설명서.txt release\
+      shell: pwsh
+
+    - name: Create ZIP archive
+      run: |
+        Compress-Archive -Path release\* -DestinationPath HansomangAutomation-Windows.zip
+      shell: pwsh
+
+    - name: Upload artifact
+      uses: actions/upload-artifact@v4
+      with:
+        name: HansomangAutomation-Windows
+        path: HansomangAutomation-Windows.zip
+        retention-days: 30
+
+    - name: Create Release (on tag)
+      if: startsWith(github.ref, 'refs/tags/')
+      uses: softprops/action-gh-release@v1
+      with:
+        files: HansomangAutomation-Windows.zip
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
