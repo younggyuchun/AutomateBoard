@@ -150,7 +150,11 @@ class AutomationGUI:
             try:
                 with sync_playwright() as playwright:
                     self.log_message(self.sermon_log, "브라우저 실행 중...")
-                    browser = playwright.chromium.launch(headless=False)
+                    #browser = playwright.chromium.launch(headless=False)
+                    browser = playwright.chromium.launch(
+                        headless=True,
+                        channel="chrome"  # 시스템에 설치된 크롬을 직접 사용
+                    )
                     context = browser.new_context()
                     page = context.new_page()
 
