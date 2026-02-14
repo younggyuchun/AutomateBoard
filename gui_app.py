@@ -271,12 +271,10 @@ class AutomationGUI:
                     page.get_by_role("button", name="글쓰기완료").click()
                     page.wait_for_load_state("domcontentloaded")
 
-                    self.log_message(self.sermon_log, "완료! 브라우저 종료 중...", self.sermon_progress, 0.95, self.sermon_progress_label)
-                    context.close()
-                    browser.close()
+                    self.log_message(self.sermon_log, "완료! 결과를 확인하세요.", self.sermon_progress, 1.0, self.sermon_progress_label)
+                    messagebox.showinfo("완료", "주일설교 등록이 완료되었습니다.\n브라우저 창에서 결과를 확인하세요.\n\n확인 후 브라우저를 직접 닫으시면 됩니다.")
 
-                    self.log_message(self.sermon_log, "✓ 주일설교 등록이 완료되었습니다.", self.sermon_progress, 1.0, self.sermon_progress_label)
-                    messagebox.showinfo("완료", "주일설교 등록이 완료되었습니다.")
+                    # 브라우저를 닫지 않음 - 사용자가 수동으로 닫을 수 있도록 유지
 
             except Exception as e:
                 self.log_message(self.sermon_log, f"✗ 오류 발생: {str(e)}")
