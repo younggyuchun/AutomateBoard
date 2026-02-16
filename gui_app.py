@@ -21,7 +21,7 @@ class AutomationGUI:
         self.config_file = Path.home() / ".hansomang_automation_config.json"
 
         # 브라우저 보이기 설정 변수 (True = 보이기, False = 숨기기)
-        self.show_browser_var = ctk.BooleanVar(value=True)
+        self.show_browser_var = ctk.BooleanVar(value=False)
 
         # 외부영상연결 URL 공유 변수 (라이브예배 & 동영상와 팝업창 수정이 동일한 값 공유)
         self.shared_url_var = ctk.StringVar(value="")
