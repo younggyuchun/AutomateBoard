@@ -23,7 +23,7 @@ class AutomationGUI:
         # 브라우저 보이기 설정 변수 (True = 보이기, False = 숨기기)
         self.show_browser_var = ctk.BooleanVar(value=True)
 
-        # 외부영상연결 URL 공유 변수 (주일설교와 팝업창 수정이 동일한 값 공유)
+        # 외부영상연결 URL 공유 변수 (라이브예배 & 동영상와 팝업창 수정이 동일한 값 공유)
         self.shared_url_var = ctk.StringVar(value="")
 
         # 로그인 정보 변수 (기본값 설정)
@@ -40,9 +40,9 @@ class AutomationGUI:
         # 탭 텍스트 크기 설정
         self.tabview._segmented_button.configure(font=("", 16, "bold"))
 
-        # 주일설교 탭
-        self.tabview.add("주일설교 등록")
-        self.sermon_tab = self.tabview.tab("주일설교 등록")
+        # 라이브예배 & 동영상 탭
+        self.tabview.add("라이브예배 & 동영상")
+        self.sermon_tab = self.tabview.tab("라이브예배 & 동영상")
         self.create_sermon_tab()
 
         # 팝업 탭
@@ -105,7 +105,7 @@ class AutomationGUI:
 
 
     def create_sermon_tab(self):
-        """주일설교 등록 탭 생성"""
+        """라이브예배 & 동영상 탭 생성"""
         # 입력 프레임
         input_frame = ctk.CTkFrame(self.sermon_tab, corner_radius=15)
         input_frame.pack(fill='x', padx=20, pady=20)
@@ -150,7 +150,7 @@ class AutomationGUI:
         # 실행 버튼 (오른쪽)
         self.sermon_run_btn = ctk.CTkButton(
             button_frame,
-            text="주일설교 등록 실행",
+            text="라이브예배 동영상 등록",
             command=self.run_sermon_automation,
             height=50,
             font=("", 17, "bold"),
@@ -352,7 +352,7 @@ class AutomationGUI:
         self.root.update()
 
     def run_sermon_automation(self):
-        """주일설교 등록 자동화 실행"""
+        """라이브예배 & 동영상 자동화 실행"""
         # 아이디/비밀번호 검증
         username = self.username_var.get().strip()
         password = self.password_var.get().strip()
@@ -377,7 +377,7 @@ class AutomationGUI:
         self.sermon_log.delete("1.0", "end")
         self.sermon_progress.set(0)
         self.sermon_progress_label.configure(text="0%")
-        self.log_message(self.sermon_log, "주일설교 등록 시작...", self.sermon_progress, 0, self.sermon_progress_label)
+        self.log_message(self.sermon_log, "라이브예배 & 동영상 시작...", self.sermon_progress, 0, self.sermon_progress_label)
 
         def run_task():
             try:
@@ -426,7 +426,7 @@ class AutomationGUI:
                         return
 
                     self.log_message(self.sermon_log, "주일설교 페이지 이동 중...", self.sermon_progress, 0.5, self.sermon_progress_label)
-                    page.goto("https://www.hansomang.ca/_chboard/bbs/board.php?bo_table=m2_1")
+                    page.goto("https://www.hansomang.ca/_chboard/bbs/board.php?bo_table=m2_3")
 
                     self.log_message(self.sermon_log, "글쓰기 페이지 로딩 중...", self.sermon_progress, 0.6, self.sermon_progress_label)
                     page.get_by_role("link", name=" 글쓰기").click()
@@ -456,7 +456,7 @@ class AutomationGUI:
                     page.wait_for_load_state("domcontentloaded")
 
                     self.log_message(self.sermon_log, "완료! 결과를 확인하세요.", self.sermon_progress, 1.0, self.sermon_progress_label)
-                    messagebox.showinfo("완료", "주일설교 등록이 완료되었습니다.\n브라우저 창에서 결과를 확인하세요.\n\n확인 후 브라우저를 직접 닫으시면 됩니다.")
+                    messagebox.showinfo("완료", "라이브예배 & 동영상 등록이 완료되었습니다.\n브라우저 창에서 결과를 확인하세요.\n\n확인 후 브라우저를 직접 닫으시면 됩니다.")
 
                     # 브라우저를 닫지 않음 - 사용자가 수동으로 닫을 수 있도록 유지
 
