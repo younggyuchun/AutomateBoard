@@ -537,17 +537,13 @@ class AutomationGUI:
                 self._set_notice_progress(1.0, f"✓ {len(items)}개 항목 파싱 완료. '엑셀로 저장'을 눌러주세요.")
                 self.notice_save_btn.configure(state='normal')
 
-                # 설교 정보 추출해서 라이브예배 탭의 본문 칸을 자동으로 채운다 (검증 없이 그대로)
-                sermon = self._parse_sermon_info(resp.text)
-                if sermon:
-                    date_str = self._extract_title_date(choice)
-                    subject = self._build_sermon_subject(sermon, date_str)
-                    self._stop_sermon_loading(clear_placeholder=True)
+                # 성경구절 패턴을 본문에서 찾아 라이브예배 탭의 본문 칸에 채운다
+                scripture = self._extract_scripture(resp.text)
+                self._stop_sermon_loading(clear_placeholder=True)
+                if scripture:
                     self.scripture_entry.delete(0, "end")
-                    self.scripture_entry.insert(0, subject)
-                    self.log_message(self.sermon_log, f"✓ 본문 자동 입력: {subject}")
-                else:
-                    self._stop_sermon_loading(clear_placeholder=True)
+                    self.scripture_entry.insert(0, scripture)
+                    self.log_message(self.sermon_log, f"✓ 본문 자동 입력: {scripture}")
             except Exception as e:
                 self._set_notice_progress(0, f"✗ 본문 파싱 실패: {e}")
                 self._stop_sermon_loading(clear_placeholder=True)
@@ -624,55 +620,33 @@ class AutomationGUI:
         return deduped
 
     @staticmethod
-    def _parse_sermon_info(html):
-        """본문 HTML에서 설교 정보를 추출. dict(series, title, preacher, scripture) 또는 None."""
+    def _extract_scripture(html):
+        """본문 HTML에서 성경 구절 패턴을 찾아 반환. 예: '고린도전서 9:24-27'.
+
+        패턴: {한글 책명 2~8자} {장 숫자}:{시작절 숫자}[-{끝절 숫자}]
+        '설교' 헤더 뒤에서 먼저 찾고, 없으면 전체 본문에서 첫 매치를 사용.
+        """
         soup = BeautifulSoup(html, "html.parser")
         content = soup.select_one("div.view-content") or soup.select_one("#bo_v_con")
         if not content:
             return None
         for br in content.find_all("br"):
             br.replace_with("\n")
+        text = content.get_text(separator="\n").replace("\xa0", " ")
 
-        paragraphs = []
-        block_tags = content.find_all(["p", "div", "li"])
-        if block_tags:
-            for tag in block_tags:
-                paragraphs.append(tag.get_text().replace("\xa0", " ").strip())
-        else:
-            paragraphs = [content.get_text().replace("\xa0", " ").strip()]
+        scripture_pat = re.compile(r"([가-힣]{2,8})\s*(\d+):(\d+)(?:\s*-\s*(\d+))?")
 
-        preacher_pat = re.compile(r"^\s*설교\s*\(([^)]+)\)\s*$")
-        for idx, para in enumerate(paragraphs):
-            m = preacher_pat.match(para)
-            if not m:
-                continue
-            preacher = m.group(1).strip()
-            following = [p.strip() for p in paragraphs[idx + 1:] if p.strip()]
-            if len(following) < 3:
-                continue
-            series = following[0]
-            raw_title = following[1]
-            scripture = following[2]
-            title = re.sub(r"^\s*\(\d+\)\s*", "", raw_title)
-            title = title.strip().strip("“”‘’\"' ")
-            return {"series": series, "title": title, "preacher": preacher, "scripture": scripture}
-        return None
+        sermon_idx = text.find("설교")
+        match = None
+        if sermon_idx >= 0:
+            match = scripture_pat.search(text, sermon_idx)
+        if not match:
+            match = scripture_pat.search(text)
+        if not match:
+            return None
 
-    @staticmethod
-    def _extract_title_date(title):
-        """공지 제목에서 'YYYY-M-D' 형태의 날짜를 찾아 'YYYY-MM-DD'로 정규화"""
-        m = re.search(r"(\d{4})-(\d{1,2})-(\d{1,2})", title or "")
-        if not m:
-            return datetime.now().strftime("%Y-%m-%d")
-        y, mo, d = m.groups()
-        return f"{int(y):04d}-{int(mo):02d}-{int(d):02d}"
-
-    @staticmethod
-    def _build_sermon_subject(info, date_str):
-        return (
-            f"[{info['series']}] {info['title']} - {info['preacher']} "
-            f"/ {info['scripture']} / 한소망 주일 예배 ({date_str})"
-        )
+        book, chap, v_start, v_end = match.groups()
+        return f"{book} {chap}:{v_start}-{v_end}" if v_end else f"{book} {chap}:{v_start}"
 
     def save_notice_excel(self):
         """파싱된 항목들을 엑셀로 저장"""
