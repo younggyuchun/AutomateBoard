@@ -7,6 +7,9 @@ from playwright.sync_api import sync_playwright
 import requests
 from bs4 import BeautifulSoup
 from openpyxl import Workbook
+from openpyxl.cell.rich_text import CellRichText, TextBlock
+from openpyxl.cell.text import InlineFont
+from openpyxl.styles import Alignment
 from datetime import datetime
 import json
 from pathlib import Path
@@ -583,6 +586,9 @@ class AutomationGUI:
         def flush():
             if current_num is not None:
                 body = "\n".join(current_lines).strip()
+                # 번호만 있고 제목이 다음 줄로 떨어진 경우 한 줄로 합친다
+                # 예: "1.\n주일 환영\n..." → "1. 주일 환영\n..."
+                body = re.sub(r"^(\s*\d{1,2}\s*[.)、])\s*\n\s*", r"\1 ", body)
                 items.append((current_num, body))
 
         for para in paragraphs:
@@ -670,14 +676,38 @@ class AutomationGUI:
             wb = Workbook()
             ws = wb.active
             ws.title = "공지사항"
+            wrap = Alignment(wrap_text=True, vertical="top")
             for idx, (_num, body) in enumerate(self.notice_items, start=1):
-                cell = ws.cell(row=idx, column=1, value=body)
-                cell.alignment = cell.alignment.copy(wrap_text=True)
+                cell = ws.cell(row=idx, column=1, value=self._format_notice_richtext(body))
+                cell.alignment = wrap
             ws.column_dimensions["A"].width = 80
             wb.save(file_path)
             messagebox.showinfo("저장 완료", f"엑셀 파일로 저장되었습니다.\n{file_path}")
         except Exception as e:
             messagebox.showerror("저장 실패", f"엑셀 저장 중 오류가 발생했습니다:\n{e}")
+
+    @staticmethod
+    def _format_notice_richtext(body):
+        """본문을 엑셀 rich text로 변환.
+
+        '1. 주일 / 환영\\n한소망교회...' →
+            [BOLD]1. 주일 / 환영[/BOLD]\\n한소망교회...
+        개행을 별도 TextBlock으로 빼지 않고 인접 블록에 합쳐서
+        Excel이 손상 경고를 띄우지 않도록 한다.
+        """
+        first_line, _, rest = body.partition("\n")
+        m = re.match(r"^\s*(\d+\.)\s*(.*)$", first_line)
+        if not m:
+            return body
+        marker, title = m.group(1), m.group(2).strip()
+        bold = InlineFont(b=True)
+        plain = InlineFont()
+        # 굵게 블록 하나에 "번호 제목" 을 한 줄로 담는다
+        bold_text = f"{marker} {title}" if title else marker
+        parts = [TextBlock(bold, bold_text)]
+        if rest:
+            parts.append(TextBlock(plain, "\n" + rest))
+        return CellRichText(parts)
 
     def create_settings_tab(self):
         """설정 탭 생성"""
