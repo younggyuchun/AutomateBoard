@@ -706,7 +706,8 @@ class AutomationGUI:
         bold_text = f"{marker} {title}" if title else marker
         parts = [TextBlock(bold, bold_text)]
         if rest:
-            parts.append(TextBlock(plain, "\n" + rest))
+            # 제목 줄과 본문 사이에 빈 줄 한 줄을 추가해 가독성 확보
+            parts.append(TextBlock(plain, "\n\n" + rest))
         return CellRichText(parts)
 
     def create_settings_tab(self):
