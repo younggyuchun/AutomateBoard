@@ -1,10 +1,30 @@
 import customtkinter as ctk
-from tkinter import messagebox
+from tkinter import messagebox, filedialog
 import threading
+import re
+from urllib.parse import urljoin
 from playwright.sync_api import sync_playwright
+import requests
+from bs4 import BeautifulSoup
+from openpyxl import Workbook
 from datetime import datetime
 import json
 from pathlib import Path
+
+DEFAULT_NOTICE_URL = "https://www.hansomang.ca/_chboard/bbs/board.php?bo_table=m7_1"
+
+YOUTUBE_CHANNEL_HANDLE = "@Hansomangchurch"
+YOUTUBE_LIVE_URL = f"https://www.youtube.com/{YOUTUBE_CHANNEL_HANDLE}/live"
+
+NOTICE_REQUEST_HEADERS = {
+    "User-Agent": (
+        "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) "
+        "AppleWebKit/537.36 (KHTML, like Gecko) "
+        "Chrome/120.0.0.0 Safari/537.36"
+    ),
+    "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
+    "Accept-Language": "ko-KR,ko;q=0.9,en-US;q=0.8,en;q=0.7",
+}
 
 # CustomTkinter 설정
 ctk.set_appearance_mode("light")  # Modes: "System" (default), "Dark", "Light"
@@ -33,9 +53,11 @@ class AutomationGUI:
         # 저장된 설정 불러오기
         self.load_settings()
 
-        # 탭 생성
-        self.tabview = ctk.CTkTabview(root, corner_radius=15, border_width=2)
+        # 탭 생성 (탭 변경 시 _on_tab_changed 호출)
+        self.tabview = ctk.CTkTabview(root, corner_radius=15, border_width=2, command=self._on_tab_changed)
         self.tabview.pack(fill='both', expand=True, padx=20, pady=20)
+        # 공지사항 탭 자동 로드 가드
+        self.notice_auto_loaded = False
 
         # 탭 텍스트 크기 설정
         self.tabview._segmented_button.configure(font=("", 16, "bold"))
@@ -50,10 +72,54 @@ class AutomationGUI:
         self.popup_tab = self.tabview.tab("팝업창 수정")
         self.create_popup_tab()
 
+        # 공지사항 추출 탭
+        self.tabview.add("공지사항 추출")
+        self.notice_tab = self.tabview.tab("공지사항 추출")
+        self.notice_items = []  # 파싱된 항목 [(번호, 본문), ...]
+        self.notice_list_data = []  # [(제목, URL), ...]
+        self.notice_selected_title = ""
+        self.create_notice_tab()
+
         # 설정 탭
         self.tabview.add("설정")
         self.settings_tab = self.tabview.tab("설정")
         self.create_settings_tab()
+
+        # 시작 시 유튜브 URL 자동 입력 + 공지사항 자동 로드(→ 본문 자동 입력)
+        self.root.after(300, self.fetch_youtube_live_url)
+        self.root.after(500, self._auto_load_notice)
+
+    def _auto_load_notice(self):
+        if self.notice_auto_loaded:
+            return
+        self.notice_auto_loaded = True
+        self.load_notice_list()
+
+    def _on_tab_changed(self, _value=None):
+        """탭이 바뀌면 호출. 공지사항 탭을 처음 열 때만 자동으로 목록을 불러온다."""
+        try:
+            current = self.tabview.get()
+        except Exception:
+            return
+        if current == "공지사항 추출" and not self.notice_auto_loaded:
+            self.notice_auto_loaded = True
+            self.load_notice_list()
+
+    def _enable_copy(self, textbox):
+        """텍스트박스에서 macOS Cmd+C/Cmd+A, Ctrl+C/Ctrl+A 로 선택·복사 가능하게 한다."""
+        def select_all(_event):
+            textbox.tag_add("sel", "1.0", "end-1c")
+            textbox.mark_set("insert", "1.0")
+            return "break"
+
+        def copy_selection(_event):
+            textbox.event_generate("<<Copy>>")
+            return "break"
+
+        for seq in ("<Command-c>", "<Command-C>", "<Control-c>", "<Control-C>"):
+            textbox.bind(seq, copy_selection)
+        for seq in ("<Command-a>", "<Command-A>", "<Control-a>", "<Control-A>"):
+            textbox.bind(seq, select_all)
 
     def load_settings(self):
         """저장된 설정 불러오기"""
@@ -139,7 +205,7 @@ class AutomationGUI:
         self.date_entry.insert(0, today)
 
         # 영상 URL 입력
-        ctk.CTkLabel(input_frame, text="외부영상연결 URL:", font=("", 16, "bold")).grid(row=4, column=0, sticky='w', padx=15, pady=10)
+        ctk.CTkLabel(input_frame, text="유튜브 URL:", font=("", 16, "bold")).grid(row=4, column=0, sticky='w', padx=15, pady=10)
         self.video_link_entry = ctk.CTkEntry(input_frame, width=500, height=42, corner_radius=10, font=("", 14), textvariable=self.shared_url_var)
         self.video_link_entry.grid(row=4, column=1, pady=10, padx=15)
 
@@ -190,6 +256,7 @@ class AutomationGUI:
 
         self.sermon_log = ctk.CTkTextbox(log_frame, font=("Courier", 12), corner_radius=10)
         self.sermon_log.pack(fill='both', expand=True, padx=10, pady=(0, 10))
+        self._enable_copy(self.sermon_log)
 
     def create_popup_tab(self):
         """팝업창 수정 탭 생성"""
@@ -198,7 +265,7 @@ class AutomationGUI:
         input_frame.pack(fill='x', padx=20, pady=20)
 
         # URL 입력
-        ctk.CTkLabel(input_frame, text="외부영상연결 URL:", font=("", 16, "bold")).grid(row=0, column=0, sticky='w', padx=15, pady=10)
+        ctk.CTkLabel(input_frame, text="유튜브 URL:", font=("", 16, "bold")).grid(row=0, column=0, sticky='w', padx=15, pady=10)
         self.popup_url_entry = ctk.CTkEntry(input_frame, width=500, height=42, corner_radius=10, font=("", 14), textvariable=self.shared_url_var)
         self.popup_url_entry.grid(row=0, column=1, pady=15, padx=15)
 
@@ -249,6 +316,358 @@ class AutomationGUI:
 
         self.popup_log = ctk.CTkTextbox(log_frame, font=("Courier", 12), corner_radius=10)
         self.popup_log.pack(fill='both', expand=True, padx=10, pady=(0, 10))
+        self._enable_copy(self.popup_log)
+
+    def create_notice_tab(self):
+        """공지사항 추출 탭 생성"""
+        # URL 입력 프레임
+        url_frame = ctk.CTkFrame(self.notice_tab, corner_radius=15)
+        url_frame.pack(fill='x', padx=20, pady=(20, 10))
+        url_frame.grid_columnconfigure(1, weight=1)
+
+        ctk.CTkLabel(url_frame, text="공지사항 URL:", font=("", 16, "bold")).grid(
+            row=0, column=0, sticky='w', padx=15, pady=15
+        )
+        self.notice_url_var = ctk.StringVar(value=DEFAULT_NOTICE_URL)
+        self.notice_url_entry = ctk.CTkEntry(
+            url_frame, height=42, corner_radius=10, font=("", 14),
+            textvariable=self.notice_url_var
+        )
+        self.notice_url_entry.grid(row=0, column=1, sticky='ew', padx=(0, 10), pady=15)
+        self.notice_load_btn = ctk.CTkButton(
+            url_frame, text="목록 불러오기", command=self.load_notice_list,
+            height=42, font=("", 14, "bold"), corner_radius=10, width=140
+        )
+        self.notice_load_btn.grid(row=0, column=2, padx=(0, 15), pady=15)
+
+        # 셀렉트 박스 프레임
+        select_frame = ctk.CTkFrame(self.notice_tab, corner_radius=15)
+        select_frame.pack(fill='x', padx=20, pady=10)
+        select_frame.grid_columnconfigure(1, weight=1)
+
+        ctk.CTkLabel(select_frame, text="공지사항 선택:", font=("", 16, "bold")).grid(
+            row=0, column=0, sticky='w', padx=15, pady=15
+        )
+        self.notice_select_var = ctk.StringVar(value="")
+        self.notice_combobox = ctk.CTkComboBox(
+            select_frame, values=["먼저 '목록 불러오기'를 눌러주세요"],
+            variable=self.notice_select_var,
+            height=42, font=("", 14), corner_radius=10,
+            command=self.on_notice_selected, state="readonly"
+        )
+        self.notice_combobox.grid(row=0, column=1, sticky='ew', padx=(0, 15), pady=15)
+
+        # 프로그레스 바
+        progress_frame = ctk.CTkFrame(self.notice_tab, fg_color="transparent")
+        progress_frame.pack(fill='x', padx=20, pady=(0, 5))
+
+        self.notice_progress_label = ctk.CTkLabel(progress_frame, text="0%", font=("", 12))
+        self.notice_progress_label.pack(anchor='e', padx=5, pady=(0, 2))
+
+        self.notice_progress = ctk.CTkProgressBar(progress_frame, height=20)
+        self.notice_progress.pack(fill='x')
+        self.notice_progress.set(0)
+
+        # 미리보기 / 로그 프레임
+        preview_frame = ctk.CTkFrame(self.notice_tab, corner_radius=15)
+        preview_frame.pack(fill='both', expand=True, padx=20, pady=10)
+
+        ctk.CTkLabel(
+            preview_frame, text="추출 결과 미리보기",
+            font=("", 16, "bold"), anchor='w'
+        ).pack(pady=(10, 5), padx=15, fill='x')
+
+        self.notice_preview = ctk.CTkTextbox(preview_frame, font=("", 12), corner_radius=10)
+        self.notice_preview.pack(fill='both', expand=True, padx=10, pady=(0, 10))
+        self._enable_copy(self.notice_preview)
+
+        # 저장 버튼 프레임
+        save_frame = ctk.CTkFrame(self.notice_tab, fg_color="transparent")
+        save_frame.pack(fill='x', padx=20, pady=(0, 20))
+
+        self.notice_save_btn = ctk.CTkButton(
+            save_frame, text="엑셀로 저장", command=self.save_notice_excel,
+            height=50, font=("", 17, "bold"), corner_radius=12,
+            fg_color="green", hover_color="darkgreen", state="disabled"
+        )
+        self.notice_save_btn.pack(side='right')
+
+    def _set_notice_progress(self, value, message=None):
+        """공지사항 탭 진행 상태 업데이트"""
+        self.notice_progress.set(value)
+        self.notice_progress_label.configure(text=f"{int(value * 100)}%")
+        if message:
+            self.notice_preview.insert("end", message + "\n")
+            self.notice_preview.see("end")
+        self.root.update()
+
+    def load_notice_list(self):
+        """공지사항 목록 페이지에서 제목/링크 불러오기"""
+        url = self.notice_url_var.get().strip()
+        if not url:
+            messagebox.showwarning("입력 오류", "공지사항 URL을 입력해주세요.")
+            return
+
+        self.notice_load_btn.configure(state='disabled')
+        self.notice_save_btn.configure(state='disabled')
+        self.notice_preview.delete("1.0", "end")
+        self.notice_items = []
+        self.notice_list_data = []
+        self.notice_combobox.configure(values=["불러오는 중..."])
+        self.notice_select_var.set("불러오는 중...")
+        self._set_notice_progress(0.1, f"목록 페이지 요청 중: {url}")
+
+        def run_task():
+            try:
+                resp = requests.get(url, headers=NOTICE_REQUEST_HEADERS, timeout=20)
+                resp.raise_for_status()
+                resp.encoding = resp.apparent_encoding or "utf-8"
+                self._set_notice_progress(0.5, "HTML 파싱 중...")
+
+                soup = BeautifulSoup(resp.text, "html.parser")
+                # bo_table=...&wr_id=숫자 형태의 글 링크만 추출
+                seen = set()
+                items = []
+                for a in soup.find_all("a", href=True):
+                    href = a["href"]
+                    if "bo_table=" not in href or "wr_id=" not in href:
+                        continue
+                    full_url = urljoin(url, href)
+                    # 동일 URL 중복 제거
+                    if full_url in seen:
+                        continue
+                    title = a.get_text(strip=True)
+                    if not title:
+                        continue
+                    seen.add(full_url)
+                    items.append((title, full_url))
+
+                if not items:
+                    self._set_notice_progress(0, "공지사항 링크를 찾을 수 없습니다.")
+                    self.notice_combobox.configure(values=["항목 없음"])
+                    self.notice_select_var.set("항목 없음")
+                    messagebox.showwarning("결과 없음", "공지사항 링크를 찾을 수 없습니다. URL을 확인해주세요.")
+                    return
+
+                self.notice_list_data = items
+                titles = [t for t, _ in items]
+                self.notice_combobox.configure(values=titles)
+                # 자동으로 제일 위에 있는 공지사항 선택 (요구사항 #0)
+                self.notice_select_var.set(titles[0])
+                self._set_notice_progress(1.0, f"✓ {len(items)}개 공지사항을 찾았습니다. 첫 항목을 자동으로 파싱합니다...")
+                # 첫 항목 자동 파싱
+                self.on_notice_selected(titles[0])
+            except Exception as e:
+                self._set_notice_progress(0, f"✗ 목록 불러오기 실패: {e}")
+                messagebox.showerror("오류", f"공지사항 목록을 불러오지 못했습니다:\n{e}")
+            finally:
+                self.notice_load_btn.configure(state='normal')
+
+        threading.Thread(target=run_task, daemon=True).start()
+
+    def on_notice_selected(self, choice):
+        """셀렉트박스에서 공지사항 선택 시 본문 파싱"""
+        if not choice or choice in ("불러오는 중...", "항목 없음", "먼저 '목록 불러오기'를 눌러주세요"):
+            return
+
+        detail_url = None
+        for title, link in self.notice_list_data:
+            if title == choice:
+                detail_url = link
+                break
+        if not detail_url:
+            return
+
+        self.notice_selected_title = choice
+        self.notice_save_btn.configure(state='disabled')
+        self.notice_preview.delete("1.0", "end")
+        self.notice_items = []
+        self._set_notice_progress(0.1, f"선택: {choice}\n본문 요청 중: {detail_url}")
+
+        def run_task():
+            try:
+                resp = requests.get(detail_url, headers=NOTICE_REQUEST_HEADERS, timeout=20)
+                resp.raise_for_status()
+                resp.encoding = resp.apparent_encoding or "utf-8"
+                self._set_notice_progress(0.5, "본문 파싱 중...")
+
+                items = self.parse_notice_detail(resp.text)
+                if not items:
+                    self._set_notice_progress(0, "번호가 매겨진 공지 항목을 찾지 못했습니다.")
+                    messagebox.showwarning("파싱 실패", "번호로 시작하는 공지 항목을 찾지 못했습니다.")
+                    return
+
+                self.notice_items = items
+                self.notice_preview.delete("1.0", "end")
+                for num, body in items:
+                    self.notice_preview.insert("end", f"━━ {num}번 ━━\n{body}\n\n")
+                self.notice_preview.see("1.0")
+                self._set_notice_progress(1.0, f"✓ {len(items)}개 항목 파싱 완료. '엑셀로 저장'을 눌러주세요.")
+                self.notice_save_btn.configure(state='normal')
+
+                # 설교 정보 추출해서 라이브예배 탭의 본문 칸을 자동으로 채운다 (검증 없이 그대로)
+                sermon = self._parse_sermon_info(resp.text)
+                if sermon:
+                    date_str = self._extract_title_date(choice)
+                    subject = self._build_sermon_subject(sermon, date_str)
+                    self.scripture_entry.delete(0, "end")
+                    self.scripture_entry.insert(0, subject)
+                    self.log_message(self.sermon_log, f"✓ 본문 자동 입력: {subject}")
+            except Exception as e:
+                self._set_notice_progress(0, f"✗ 본문 파싱 실패: {e}")
+                messagebox.showerror("오류", f"공지사항 본문을 불러오지 못했습니다:\n{e}")
+
+        threading.Thread(target=run_task, daemon=True).start()
+
+    def parse_notice_detail(self, html):
+        """본문 HTML에서 번호로 시작하는 공지 항목들을 추출"""
+        soup = BeautifulSoup(html, "html.parser")
+        content = soup.select_one("div.view-content") or soup.select_one("#bo_v_con")
+        if not content:
+            return []
+
+        # <br>은 줄바꿈으로 변환 (이 컨테이너 안에서만)
+        for br in content.find_all("br"):
+            br.replace_with("\n")
+
+        # 블록 단위 단락 텍스트 수집. 빈 단락(<p><br></p>)도 그대로 유지해서
+        # 번호 항목 사이의 빈 줄을 구분자로 사용한다. 인라인 텍스트는 분리자 없이
+        # 이어 붙여 <strong>1</strong><strong>.</strong> 같은 분리 굵게 표기가
+        # "1."으로 합쳐지게 한다.
+        paragraphs = []
+        block_tags = content.find_all(["p", "div", "li"])
+        if block_tags:
+            for tag in block_tags:
+                paragraphs.append(tag.get_text().replace("\xa0", " ").strip())
+        else:
+            paragraphs = [content.get_text().replace("\xa0", " ").strip()]
+
+        item_start = re.compile(r"^\s*(\d{1,2})\s*[.)、]\s*(.*)$", re.DOTALL)
+        items = []
+        current_num = None
+        current_lines = []
+        saw_blank = False
+
+        def flush():
+            if current_num is not None:
+                body = "\n".join(current_lines).strip()
+                items.append((current_num, body))
+
+        for para in paragraphs:
+            if not para:
+                saw_blank = True
+                continue
+            first_line = para.split("\n", 1)[0].strip()
+            m = item_start.match(first_line)
+            if m:
+                flush()
+                current_num = int(m.group(1))
+                current_lines = [para.strip()]
+                saw_blank = False
+                continue
+            if current_num is None:
+                # 번호 항목이 시작되기 전 텍스트는 무시
+                continue
+            if saw_blank:
+                # 현재 항목 내용이 끝난 뒤(빈 줄) 다음이 번호가 아니면 거기서 중지
+                flush()
+                current_num = None
+                break
+            current_lines.append(para.strip())
+        flush()
+
+        # 같은 번호로 중복된 항목 정리 (혹시 본문에 동일 번호가 또 등장하면 첫 것만 유지)
+        deduped = []
+        seen_nums = set()
+        for num, body in items:
+            if num in seen_nums:
+                continue
+            seen_nums.add(num)
+            deduped.append((num, body))
+        deduped.sort(key=lambda x: x[0])
+        return deduped
+
+    @staticmethod
+    def _parse_sermon_info(html):
+        """본문 HTML에서 설교 정보를 추출. dict(series, title, preacher, scripture) 또는 None."""
+        soup = BeautifulSoup(html, "html.parser")
+        content = soup.select_one("div.view-content") or soup.select_one("#bo_v_con")
+        if not content:
+            return None
+        for br in content.find_all("br"):
+            br.replace_with("\n")
+
+        paragraphs = []
+        block_tags = content.find_all(["p", "div", "li"])
+        if block_tags:
+            for tag in block_tags:
+                paragraphs.append(tag.get_text().replace("\xa0", " ").strip())
+        else:
+            paragraphs = [content.get_text().replace("\xa0", " ").strip()]
+
+        preacher_pat = re.compile(r"^\s*설교\s*\(([^)]+)\)\s*$")
+        for idx, para in enumerate(paragraphs):
+            m = preacher_pat.match(para)
+            if not m:
+                continue
+            preacher = m.group(1).strip()
+            following = [p.strip() for p in paragraphs[idx + 1:] if p.strip()]
+            if len(following) < 3:
+                continue
+            series = following[0]
+            raw_title = following[1]
+            scripture = following[2]
+            title = re.sub(r"^\s*\(\d+\)\s*", "", raw_title)
+            title = title.strip().strip("“”‘’\"' ")
+            return {"series": series, "title": title, "preacher": preacher, "scripture": scripture}
+        return None
+
+    @staticmethod
+    def _extract_title_date(title):
+        """공지 제목에서 'YYYY-M-D' 형태의 날짜를 찾아 'YYYY-MM-DD'로 정규화"""
+        m = re.search(r"(\d{4})-(\d{1,2})-(\d{1,2})", title or "")
+        if not m:
+            return datetime.now().strftime("%Y-%m-%d")
+        y, mo, d = m.groups()
+        return f"{int(y):04d}-{int(mo):02d}-{int(d):02d}"
+
+    @staticmethod
+    def _build_sermon_subject(info, date_str):
+        return (
+            f"[{info['series']}] {info['title']} - {info['preacher']} "
+            f"/ {info['scripture']} / 한소망 주일 예배 ({date_str})"
+        )
+
+    def save_notice_excel(self):
+        """파싱된 항목들을 엑셀로 저장"""
+        if not self.notice_items:
+            messagebox.showwarning("저장 불가", "저장할 공지 항목이 없습니다. 먼저 공지사항을 선택해주세요.")
+            return
+
+        # 파일명 기본값: "VMIX 공지사항 {현재년도}.xlsx"
+        default_name = f"VMIX 공지사항 {datetime.now().year}.xlsx"
+
+        file_path = filedialog.asksaveasfilename(
+            title="엑셀 파일 저장",
+            defaultextension=".xlsx",
+            initialfile=default_name,
+            filetypes=[("Excel 파일", "*.xlsx"), ("모든 파일", "*.*")]
+        )
+        if not file_path:
+            return
+
+        try:
+            wb = Workbook()
+            ws = wb.active
+            ws.title = "공지사항"
+            for idx, (_num, body) in enumerate(self.notice_items, start=1):
+                cell = ws.cell(row=idx, column=1, value=body)
+                cell.alignment = cell.alignment.copy(wrap_text=True)
+            ws.column_dimensions["A"].width = 80
+            wb.save(file_path)
+            messagebox.showinfo("저장 완료", f"엑셀 파일로 저장되었습니다.\n{file_path}")
+        except Exception as e:
+            messagebox.showerror("저장 실패", f"엑셀 저장 중 오류가 발생했습니다:\n{e}")
 
     def create_settings_tab(self):
         """설정 탭 생성"""
@@ -350,6 +769,11 @@ class AutomationGUI:
             if progress_label is not None:
                 progress_label.configure(text=f"{int(progress_value * 100)}%")
         self.root.update()
+
+    def fetch_youtube_live_url(self):
+        """YouTube 채널의 라이브 URL을 유튜브 URL 칸에 그대로 채운다."""
+        self.shared_url_var.set(YOUTUBE_LIVE_URL)
+        self.log_message(self.sermon_log, f"✓ 유튜브 URL 자동 입력: {YOUTUBE_LIVE_URL}")
 
     def run_sermon_automation(self):
         """라이브예배 & 동영상 자동화 실행"""
