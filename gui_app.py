@@ -401,6 +401,31 @@ class AutomationGUI:
             self.notice_preview.see("end")
         self.root.update()
 
+    def _start_sermon_loading(self):
+        """라이브예배 탭에 본문 자동 로딩 표시 (placeholder + 진행바 indeterminate)"""
+        try:
+            self.scripture_entry.delete(0, "end")
+            self.scripture_entry.insert(0, "⏳ 본문 자동 불러오는 중...")
+            self.sermon_progress.configure(mode="indeterminate")
+            self.sermon_progress.start()
+            self.sermon_progress_label.configure(text="본문 불러오는 중...")
+            self.root.update()
+        except Exception:
+            pass
+
+    def _stop_sermon_loading(self, clear_placeholder=False):
+        """라이브예배 탭의 로딩 표시 해제"""
+        try:
+            self.sermon_progress.stop()
+            self.sermon_progress.configure(mode="determinate")
+            self.sermon_progress.set(0)
+            self.sermon_progress_label.configure(text="0%")
+            if clear_placeholder and self.scripture_entry.get().startswith("⏳"):
+                self.scripture_entry.delete(0, "end")
+            self.root.update()
+        except Exception:
+            pass
+
     def load_notice_list(self):
         """공지사항 목록 페이지에서 제목/링크 불러오기"""
         url = self.notice_url_var.get().strip()
@@ -416,6 +441,7 @@ class AutomationGUI:
         self.notice_combobox.configure(values=["불러오는 중..."])
         self.notice_select_var.set("불러오는 중...")
         self._set_notice_progress(0.1, f"목록 페이지 요청 중: {url}")
+        self._start_sermon_loading()
 
         def run_task():
             try:
@@ -446,6 +472,7 @@ class AutomationGUI:
                     self._set_notice_progress(0, "공지사항 링크를 찾을 수 없습니다.")
                     self.notice_combobox.configure(values=["항목 없음"])
                     self.notice_select_var.set("항목 없음")
+                    self._stop_sermon_loading(clear_placeholder=True)
                     messagebox.showwarning("결과 없음", "공지사항 링크를 찾을 수 없습니다. URL을 확인해주세요.")
                     return
 
@@ -459,6 +486,7 @@ class AutomationGUI:
                 self.on_notice_selected(titles[0])
             except Exception as e:
                 self._set_notice_progress(0, f"✗ 목록 불러오기 실패: {e}")
+                self._stop_sermon_loading(clear_placeholder=True)
                 messagebox.showerror("오류", f"공지사항 목록을 불러오지 못했습니다:\n{e}")
             finally:
                 self.notice_load_btn.configure(state='normal')
@@ -484,6 +512,9 @@ class AutomationGUI:
         self.notice_items = []
         self._set_notice_progress(0.1, f"선택: {choice}\n본문 요청 중: {detail_url}")
 
+        # 라이브예배 탭에도 로딩 표시 — 본문 칸 placeholder + 진행바 indeterminate
+        self._start_sermon_loading()
+
         def run_task():
             try:
                 resp = requests.get(detail_url, headers=NOTICE_REQUEST_HEADERS, timeout=20)
@@ -494,6 +525,7 @@ class AutomationGUI:
                 items = self.parse_notice_detail(resp.text)
                 if not items:
                     self._set_notice_progress(0, "번호가 매겨진 공지 항목을 찾지 못했습니다.")
+                    self._stop_sermon_loading(clear_placeholder=True)
                     messagebox.showwarning("파싱 실패", "번호로 시작하는 공지 항목을 찾지 못했습니다.")
                     return
 
@@ -510,11 +542,15 @@ class AutomationGUI:
                 if sermon:
                     date_str = self._extract_title_date(choice)
                     subject = self._build_sermon_subject(sermon, date_str)
+                    self._stop_sermon_loading(clear_placeholder=True)
                     self.scripture_entry.delete(0, "end")
                     self.scripture_entry.insert(0, subject)
                     self.log_message(self.sermon_log, f"✓ 본문 자동 입력: {subject}")
+                else:
+                    self._stop_sermon_loading(clear_placeholder=True)
             except Exception as e:
                 self._set_notice_progress(0, f"✗ 본문 파싱 실패: {e}")
+                self._stop_sermon_loading(clear_placeholder=True)
                 messagebox.showerror("오류", f"공지사항 본문을 불러오지 못했습니다:\n{e}")
 
         threading.Thread(target=run_task, daemon=True).start()
